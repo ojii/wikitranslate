@@ -43,7 +43,7 @@ const load = (() => {
             result.textContent = '...';
             load(`https://${slang}.wikipedia.org/w/api.php?action=query&titles=${term}&prop=langlinks&lllang=${tlang}&format=json&callback=processResult`).then((data) => {
                 const page = data.query.pages[Object.keys(data.query.pages)[0]];
-                history.pushState(data, document.title, `/?q=${term}&s=${slang}&t=${tlang}`);
+                history.pushState(data, document.title, `/?q=${search.value}&s=${slang}&t=${tlang}`);
                 if (page.langlinks && page.langlinks.length) {
                     result.textContent = page.langlinks[0]['*'];
                 } else {
