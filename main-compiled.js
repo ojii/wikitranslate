@@ -28,7 +28,25 @@ var load = (function () {
     var search = document.getElementById('search'),
         source = document.getElementById('source'),
         target = document.getElementById('target'),
-        result = document.getElementById('result');
+        result = document.getElementById('result'),
+        params = (function () {
+        var args = {};
+        var bits = location.search.split('&');
+        for (var i = 0, l = bits.length; i < l; i++) {
+            var arg = decodeURIComponent(args[i]);
+            if (arg.indexOf('=') === -1) {
+                args[arg.trim()] = true;
+            } else {
+                arg = arg.split('=');
+                args[arg[0].trim()] = arg[1].trim();
+            }
+        }
+        return args;
+    })();
+
+    search.value = params.q || '';
+    source.value = params.s || 'en';
+    target.value = params.t || 'ja';
 
     document.getElementById('form').addEventListener('submit', function (e) {
         var slang = encodeURIComponent(source.value),
@@ -36,13 +54,14 @@ var load = (function () {
             term = encodeURIComponent(search.value);
         load('https://' + slang + '.wikipedia.org/w/api.php?action=query&titles=' + term + '&prop=langlinks&lllang=' + tlang + '&format=json&callback=processResult').then(function (data) {
             var page = data.query.pages[Object.keys(data.query.pages)[0]];
-            if (page.langlinks.length) {
+            history.pushState(data, document.title, '/?q=' + term + '&s=' + slang + '&t=' + tlang);
+            if (page.langlinks && page.langlinks.length) {
                 result.textContent = page.langlinks[0]['*'];
             } else {
                 result.textContent = '';
             }
         })['catch'](function (reason) {
-            result.textContent = 'Error';
+            result.textContent = 'Error: ' + reason;
         });
         e.preventDefault();
         return false;
