@@ -26,41 +26,57 @@ const load = (() => {
         source = document.getElementById('source'),
         target = document.getElementById('target'),
         result = document.getElementById('result'),
-        params = (() => {
-        let args = {};
-        let bits = location.search.split('&');
-        for (var i = 0, l = bits.length; i < l; i++){
-            let arg = decodeURIComponent(args[i]);
-            if (arg.indexOf('=') === -1){
-                args[arg.trim()] = true;
-            } else {
-                arg = arg.split('=');
-                args[arg[0].trim()] = arg[1].trim();
-            }
+        form = document.getElementById('form'),
+        wikify = (s) => {
+            return s.split(' ').map((e, i) => {
+                if (i){
+                    return e.toLowerCase();
+                } else {
+                    return e[0].toUpperCase() + e.substr(1).toLowerCase();
+                }
+            }).join('_');
+        },
+        translate = () => {
+            const slang = encodeURIComponent(source.value),
+                tlang = encodeURIComponent(target.value),
+                term = encodeURIComponent(wikify(search.value));
+            result.textContent = '...';
+            load(`https://${slang}.wikipedia.org/w/api.php?action=query&titles=${term}&prop=langlinks&lllang=${tlang}&format=json&callback=processResult`).then((data) => {
+                const page = data.query.pages[Object.keys(data.query.pages)[0]];
+                history.pushState(data, document.title, `/?q=${term}&s=${slang}&t=${tlang}`);
+                if (page.langlinks && page.langlinks.length) {
+                    result.textContent = page.langlinks[0]['*'];
+                } else {
+                    result.textContent = '';
+                }
+            }).catch((reason) => {
+                result.textContent = `Error: ${reason}`;
+            });
+        };
+
+    let params = {};
+    let bits = location.search.substr(1).split('&');
+    for (var i = 0, l = bits.length; i < l; i++){
+        let arg = decodeURIComponent(bits[i]);
+        if (arg.indexOf('=') === -1){
+            params[arg.trim()] = true;
+        } else {
+            arg = arg.split('=');
+            params[arg[0].trim()] = arg[1].trim().split('_').join(' ');
         }
-        return args
-    })();
+    }
 
     search.value = params.q || '';
     source.value = params.s || 'en';
     target.value = params.t || 'ja';
 
-    document.getElementById('form').addEventListener('submit', (e) => {
-        const slang = encodeURIComponent(source.value),
-            tlang = encodeURIComponent(target.value),
-            term = encodeURIComponent(search.value);
-        load(`https://${slang}.wikipedia.org/w/api.php?action=query&titles=${term}&prop=langlinks&lllang=${tlang}&format=json&callback=processResult`).then((data) => {
-            const page = data.query.pages[Object.keys(data.query.pages)[0]];
-            history.pushState(data, document.title, `/?q=${term}&s=${slang}&t=${tlang}`);
-            if (page.langlinks && page.langlinks.length) {
-                result.textContent = page.langlinks[0]['*'];
-            } else {
-                result.textContent = '';
-            }
-        }).catch((reason) => {
-            result.textContent = `Error: ${reason}`;
-        });
+    form.addEventListener('submit', (e) => {
+        translate();
         e.preventDefault();
         return false;
     });
+
+    if (search.value.length){
+        translate();
+    }
 })();

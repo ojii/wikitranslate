@@ -29,29 +29,21 @@ var load = (function () {
         source = document.getElementById('source'),
         target = document.getElementById('target'),
         result = document.getElementById('result'),
-        params = (function () {
-        var args = {};
-        var bits = location.search.split('&');
-        for (var i = 0, l = bits.length; i < l; i++) {
-            var arg = decodeURIComponent(args[i]);
-            if (arg.indexOf('=') === -1) {
-                args[arg.trim()] = true;
+        form = document.getElementById('form'),
+        wikify = function wikify(s) {
+        return s.split(' ').map(function (e, i) {
+            if (i) {
+                return e.toLowerCase();
             } else {
-                arg = arg.split('=');
-                args[arg[0].trim()] = arg[1].trim();
+                return e[0].toUpperCase() + e.substr(1).toLowerCase();
             }
-        }
-        return args;
-    })();
-
-    search.value = params.q || '';
-    source.value = params.s || 'en';
-    target.value = params.t || 'ja';
-
-    document.getElementById('form').addEventListener('submit', function (e) {
+        }).join('_');
+    },
+        translate = function translate() {
         var slang = encodeURIComponent(source.value),
             tlang = encodeURIComponent(target.value),
-            term = encodeURIComponent(search.value);
+            term = encodeURIComponent(wikify(search.value));
+        result.textContent = '...';
         load('https://' + slang + '.wikipedia.org/w/api.php?action=query&titles=' + term + '&prop=langlinks&lllang=' + tlang + '&format=json&callback=processResult').then(function (data) {
             var page = data.query.pages[Object.keys(data.query.pages)[0]];
             history.pushState(data, document.title, '/?q=' + term + '&s=' + slang + '&t=' + tlang);
@@ -63,9 +55,33 @@ var load = (function () {
         })['catch'](function (reason) {
             result.textContent = 'Error: ' + reason;
         });
+    };
+
+    var params = {};
+    var bits = location.search.substr(1).split('&');
+    for (var i = 0, l = bits.length; i < l; i++) {
+        var arg = decodeURIComponent(bits[i]);
+        if (arg.indexOf('=') === -1) {
+            params[arg.trim()] = true;
+        } else {
+            arg = arg.split('=');
+            params[arg[0].trim()] = arg[1].trim().split('_').join(' ');
+        }
+    }
+
+    search.value = params.q || '';
+    source.value = params.s || 'en';
+    target.value = params.t || 'ja';
+
+    form.addEventListener('submit', function (e) {
+        translate();
         e.preventDefault();
         return false;
     });
+
+    if (search.value.length) {
+        translate();
+    }
 })();
 
 //# sourceMappingURL=main-compiled.js.map
